@@ -8,7 +8,7 @@ const client = new Client({
   ]
 });
 
-const TOKEN = 'MTM3NjQ3NDU3MzUxOTcxNjQyMg.GM1i2t.ydCIztqI3UcGxfZsEDnfDU-5h4paRwJdJvHpvA';
+const TOKEN = 'MTM3NjQ3NDU3MzUxOTcxNjQyMg.Gb8Uy4.39BBTZxIQk_cjawNrLfPa2enT-kIQHwzKZy0Og';
 const OWNER_ID = '1360479539515490365';
 
 client.once('ready', () => {
