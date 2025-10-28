@@ -1,43 +1,54 @@
-const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
+import discord
+from discord.ext import tasks, commands
+import requests
+from bs4 import BeautifulSoup
+import re
+from keep_alive import keep_alive  # ✅ Giữ bot sống 24/24
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-});
+TOKEN = "NHẬP_TOKEN_BOT_DISCORD_VÀO_ĐÂY"  # 🔹 Thay bằng token bot của bạn
+CHANNEL_ID = 1432358007471210549# ID kênh Discord muốn gửi code
 
-const TOKEN = 'MTM3NjQ3NDU3MzUxOTcxNjQyMg.Gb8Uy4.39BBTZxIQk_cjawNrLfPa2enT-kIQHwzKZy0Og';
-const OWNER_ID = '1360479539515490365';
+bot = commands.Bot(command_prefix="!", intents=discord.Intents.default())
+last_codes = set()
 
-client.once('ready', () => {
-  console.log(`✅ Bot đã sẵn sàng: ${client.user.tag}`);
-});
+# ======== HÀM LẤY CODE HONKAI ========
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith('oclear')) return;
+def get_latest_codes():
+    """Lấy code Honkai Star Rail mới nhất từ Hoyolab"""
+    url = "https://www.hoyolab.com/article_list/35/2"
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-  if (message.author.id !== OWNER_ID) {
-    return message.reply('❌ Chỉ chủ sở hữu bot mới được sử dụng lệnh này.');
-  }
+    codes = set()
+    for article in soup.find_all("a", href=True):
+        found = re.findall(r"\b[A-Z0-9]{10,}\b", article.get_text())
+        for code in found:
+            if len(code) >= 10:
+                codes.add(code)
+    return codes
 
-  const args = message.content.split(' ');
-  const amount = parseInt(args[1]);
 
-  if (isNaN(amount) || amount < 1 || amount > 100) {
-    return message.reply('⚠️ Hãy nhập số lượng từ 1 đến 100. Ví dụ: `?xóa 10`');
-  }
+# ======== KIỂM TRA CODE MỚI ========
 
-  try {
-    await message.channel.bulkDelete(amount + 1, true);
-    const msg = await message.channel.send(`🧹 Đã xóa ${amount} tin nhắn.`);
-    setTimeout(() => msg.delete(), 3000);
-  } catch (err) {
-    console.error(err);
-    message.reply('❗ Có lỗi xảy ra khi xóa tin nhắn.');
-  }
-});
+@tasks.loop(minutes=30)
+async def check_codes():
+    global last_codes
+    new_codes = get_latest_codes()
+    diff = new_codes - last_codes
+    if diff:
+        channel = bot.get_channel(CHANNEL_ID)
+        await channel.send("🎁 **Code Honkai Star Rail mới!**\n" + "\n".join(diff))
+        last_codes = new_codes
 
-client.login(TOKEN);
+
+# ======== SỰ KIỆN BOT ========
+
+@bot.event
+async def on_ready():
+    print(f"✅ Bot đã đăng nhập: {bot.user}")
+    check_codes.start()
+
+
+# ======== CHẠY BOT 24/24 ========
+keep_alive()  # ✅ Giữ cho Replit luôn bật
+bot.run(TOKEN)
